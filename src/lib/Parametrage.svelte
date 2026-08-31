@@ -309,7 +309,8 @@
     user-select: none;
     display: inline-flex;
     align-items: center;
-    padding: 0 4px;
+    padding: 0;
+    margin-right: -4px;
     transition: color 0.15s;
   }
   .handle:hover { color: var(--cyan); }
