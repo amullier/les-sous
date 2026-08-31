@@ -50,3 +50,8 @@ body::before {
   background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.28); }
+
+/* badge Netlify injecté au runtime */
+#nl-badge-frame {
+  display: none;
+}
