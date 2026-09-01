@@ -2,7 +2,7 @@
   import { fmt, parseAmount } from './utils.js'
 
   /** Champ montant : accepte un nombre ou une somme "11,2+50+60". */
-  let { value = null, onchange, placeholder = '', onediting = () => {} } = $props()
+  let { value = null, onchange, placeholder = '', onediting = () => {}, dimZero = false } = $props()
 
   let editing = false
   const display = $derived(value == null ? '' : fmt(value))
@@ -30,6 +30,7 @@
 
 <input
   class="amt"
+  class:zero={dimZero && value === 0}
   type="text"
   inputmode="decimal"
   value={display}
@@ -54,6 +55,7 @@
     transition: border-color 0.15s, box-shadow 0.15s;
   }
   .amt:hover { border-color: rgba(255, 255, 255, 0.18); }
+  .amt.zero:not(:focus) { color: var(--muted); }
   .amt:focus {
     outline: none;
     border-color: rgba(34, 211, 238, 0.7);

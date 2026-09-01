@@ -40,7 +40,7 @@
   }
   function addExpense(cat) {
     const id = uid()
-    cat.expenses.push({ id, name: 'Nouvelle dépense', locked: false, planned: null, incomeLineId: null })
+    cat.expenses.push({ id, name: 'Nouvelle dépense', locked: false, incomeLineId: null })
     focusId = id
   }
   function removeExpense(cat, id) {
@@ -173,7 +173,7 @@
 
   <section>
     <h2>Catégories & dépenses</h2>
-    <p class="hint"><Icon name="lock" size={12} /> = dépense fixe (loyer, abonnement…). « Prévu » = montant attendu chaque mois, affiché en gris dans le suivi (validez-le d'un clic sur <Icon name="check" size={12} />). <Icon name="link" size={12} /> = dépense rattachée à une recette : la somme de ces dépenses alimente automatiquement la recette (ex. dépenses en tickets resto → recette « Tickets resto »).</p>
+    <p class="hint"><Icon name="lock" size={12} /> = dépense fixe (loyer, abonnement…) : dans le suivi, le montant du mois précédent est proposé en gris (validez-le d'un clic sur <Icon name="check" size={12} />). <Icon name="link" size={12} /> = dépense rattachée à une recette : la somme de ces dépenses alimente automatiquement la recette (ex. dépenses en tickets resto → recette « Tickets resto »).</p>
     {#each S.categories as cat, ci (cat.id)}
       <div
         class="cat"
@@ -198,9 +198,6 @@
               <input type="checkbox" bind:checked={e.locked} /><Icon name="lock" size={13} />
             </label>
             <input type="text" bind:value={e.name} use:focusOnMount={e.id} />
-            <label class="planned">
-              Prévu : <input type="number" min="0" step="1" bind:value={e.planned} /> €
-            </label>
             <label class="linkinc" title="La somme de ces dépenses alimentera automatiquement la recette choisie (ex. tickets resto)">
               <Icon name="link" size={13} />
               <select bind:value={e.incomeLineId}>
@@ -263,7 +260,7 @@
   }
   h3 { margin: 18px 0 6px; font-size: 13px; color: var(--txt); text-transform: uppercase; letter-spacing: 0.1em; }
   .row { display: flex; align-items: center; gap: 6px; margin: 5px 0; flex-wrap: wrap; }
-  .row > span { min-width: 180px; color: var(--muted); }
+  .row > span:not(.handle) { min-width: 180px; color: var(--muted); }
   input[type='text'] { flex: 1; min-width: 140px; }
   input, select {
     font: inherit;
@@ -310,7 +307,7 @@
     display: inline-flex;
     align-items: center;
     padding: 0;
-    margin-right: -4px;
+    margin: 0 -9px 0 -3px;
     transition: color 0.15s;
   }
   .handle:hover { color: var(--cyan); }
@@ -334,8 +331,6 @@
   .exp { padding-left: 14px; }
   .lock { display: flex; align-items: center; gap: 2px; }
   .lock input { accent-color: var(--cyan); }
-  .planned { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
-  .planned input { width: 70px; }
   .linkinc { display: flex; align-items: center; gap: 4px; font-size: 13px; }
   .linkinc select { max-width: 170px; font-size: 12px; padding: 4px 6px; }
   .curmonth {

@@ -40,7 +40,7 @@
       sel: '[data-tour="param"]',
       screen: 'param',
       title: 'Paramétrage',
-      text: 'Personnes, recettes, mode de répartition, catégories et montants prévus… et surtout l\u2019export / import de vos données. Bonne gestion ! 💪',
+      text: 'Personnes, recettes, mode de répartition, catégories et dépenses fixes… et surtout l\u2019export / import de vos données. Bonne gestion ! 💪',
     },
   ]
 

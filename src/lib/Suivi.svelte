@@ -160,6 +160,19 @@
   // dépense en cours de saisie : surbrillance du nom à gauche
   let editingExp = $state(null)
 
+  // catégories repliées dans le tableau (état local)
+  let collapsed = $state({})
+  const toggleCat = (id) => (collapsed[id] = !collapsed[id])
+  const allCollapsed = $derived(S.categories.length > 0 && S.categories.every((c) => collapsed[c.id]))
+  function toggleAll() {
+    const v = !allCollapsed
+    for (const c of S.categories) collapsed[c.id] = v
+  }
+
+  // suggestion = montant du mois précédent (dépenses fixes / recettes)
+  const expSuggest = (k, e) => (e.locked ? expVal(addMonths(k, -1), e.id) : null)
+  const incSuggest = (k, l) => lineIncome(addMonths(k, -1), l)
+
   // ---- Navigation clavier entre les cases saisissables ----
   const fullySelected = (t) =>
     t.selectionStart === 0 && t.selectionEnd === t.value.length && t.value.length > 0
@@ -210,7 +223,7 @@
   <span class="since">suivi depuis {monthLabel(startMonth)}</span>
 </div>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_static_element_interactions -->
 <div class="scroller" onkeydown={navKey}>
   <table>
     <thead>
@@ -254,7 +267,17 @@
                     title="Somme des dépenses rattachées ({linkedExpenses(l.id).map((e) => e.name).join(', ')})"
                     >{fmt(lineIncome(k, l))}</span>
                 {:else}
-                  <AmountInput value={lineIncome(k, l)} onchange={(v) => setIncome(k, l.id, v)} />
+                  {@const sug = incSuggest(k, l)}
+                  {#if lineIncome(k, l) == null && sug != null}
+                    <button
+                      class="ghost"
+                      title="Reprendre le montant du mois précédent ({fmt(sug)})"
+                      onclick={() => setIncome(k, l.id, sug)}><Icon name="check" size={11} /></button>
+                  {/if}
+                  <AmountInput
+                    value={lineIncome(k, l)}
+                    placeholder={lineIncome(k, l) == null && sug != null ? fmt0(sug) : ''}
+                    onchange={(v) => setIncome(k, l.id, v)} />
                 {/if}
                 {#if l.personId && lineIncome(k, l) != null && assignedTotal(k) > 0}
                   <span class="share">{pct(lineIncome(k, l) / assignedTotal(k))}</span>
@@ -318,7 +341,15 @@
     <!-- ====== DÉPENSES ====== -->
     <tbody data-tour="depenses">
       <tr class="sec dep">
-        <td class="name">Dépenses</td>
+        <td class="name">
+          <button
+            class="foldall"
+            title={allCollapsed ? 'Tout déplier' : 'Tout replier'}
+            onclick={toggleAll}>
+            <Icon name={allCollapsed ? 'chevron-down' : 'chevron-right'} size={11} />
+          </button>
+          Dépenses
+        </td>
         <td class="avg">{fmt0(avg12(expTotal))}</td>
         {#each months as k (k)}
           {@const t = expTotal(k)}
@@ -333,13 +364,22 @@
       </tr>
       {#each S.categories as cat (cat.id)}
         <tr class="cat">
-          <td class="name">{cat.name}</td>
+          <td class="name">
+            <button
+              class="fold"
+              title={collapsed[cat.id] ? 'Déplier la catégorie' : 'Replier la catégorie'}
+              onclick={() => toggleCat(cat.id)}>
+              <Icon name={collapsed[cat.id] ? 'chevron-right' : 'chevron-down'} size={12} />
+              {cat.name}
+            </button>
+          </td>
           <td class="avg">{fmt0(avg12((k) => catTotal(k, cat)))}</td>
           {#each months as k (k)}
             {@render tcell(catTotal(k, cat), catTotal(addMonths(k, -1), cat), false)}
-            <td class="num total">{fmt(catTotal(k, cat))}</td>
+            <td class="num total" class:zero={catTotal(k, cat) === 0}>{fmt(catTotal(k, cat))}</td>
           {/each}
         </tr>
+        {#if !collapsed[cat.id]}
         {#each cat.expenses as e (e.id)}
           <tr>
             <td class="name indent" class:editing={editingExp === e.id}>
@@ -352,18 +392,20 @@
             </td>
             <td class="avg">{fmt0(avg12((k) => expVal(k, e.id)))}</td>
             {#each months as k (k)}
+              {@const sug = expSuggest(k, e)}
               {@render tcell(expVal(k, e.id), expVal(addMonths(k, -1), e.id), false)}
               <td class="num">
                 <div class="cellrow">
-                  {#if expVal(k, e.id) == null && e.planned}
+                  {#if expVal(k, e.id) == null && sug != null}
                     <button
                       class="ghost"
-                      title="Valider le montant prévu"
-                      onclick={() => setExp(k, e.id, e.planned)}><Icon name="check" size={11} /></button>
+                      title="Reprendre le montant du mois précédent ({fmt(sug)})"
+                      onclick={() => setExp(k, e.id, sug)}><Icon name="check" size={11} /></button>
                   {/if}
                   <AmountInput
                     value={expVal(k, e.id)}
-                    placeholder={e.planned ? fmt0(e.planned) : ''}
+                    placeholder={expVal(k, e.id) == null && sug != null ? fmt0(sug) : ''}
+                    dimZero
                     onchange={(v) => setExp(k, e.id, v)}
                     onediting={(on) => (editingExp = on ? e.id : null)} />
                 </div>
@@ -371,6 +413,7 @@
             {/each}
           </tr>
         {/each}
+        {/if}
       {/each}
     </tbody>
   </table>
@@ -474,7 +517,42 @@
   .sec.dep td.name { background: #251507; }
 
   .cat td { font-weight: 600; background: rgba(255, 255, 255, 0.045); color: #dfe5f5; }
-  .cat td.name { background: #121729; }
+  .cat td.name { background: #121729; padding: 0; }
+  .fold {
+    font: inherit;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    padding: 4px 8px;
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .fold:hover { color: var(--cyan); }
+  .foldall {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    padding: 1px 5px;
+    border: 1px solid rgba(251, 146, 60, 0.35);
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: all 0.15s;
+  }
+  .foldall:hover {
+    border-color: var(--orange);
+    box-shadow: 0 0 8px rgba(251, 146, 60, 0.35);
+  }
+  .num.zero { color: var(--muted); }
 
   .num.muted { color: var(--muted); }
   tbody tr:not(.sec):not(.cat):hover td { background: rgba(34, 211, 238, 0.05); }

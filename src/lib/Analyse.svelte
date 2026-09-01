@@ -1,6 +1,6 @@
 <script>
   import { store } from './store.svelte.js'
-  import { fmt, fmt0, pct, addMonths, todayKey } from './utils.js'
+  import { fmt, fmt0, pct, addMonths, todayKey, monthLabel } from './utils.js'
 
   const S = $derived(store.settings)
   const startMonth = $derived(S.startMonth || todayKey())
@@ -95,6 +95,22 @@
   }
   const gridVals = $derived([0, 0.25, 0.5, 0.75, 1].map((f) => f * maxY))
   const labelStep = $derived(Math.max(1, Math.ceil(months.length / 10)))
+
+  // ---- détail d'un point du graphe (catégorie × mois) ----
+  let detail = $state(null) // { catId, k }
+  function togglePoint(catId, k) {
+    detail = detail && detail.catId === catId && detail.k === k ? null : { catId, k }
+  }
+  const detailData = $derived.by(() => {
+    if (!detail) return null
+    const i = S.categories.findIndex((c) => c.id === detail.catId)
+    if (i < 0) return null
+    const cat = S.categories[i]
+    const rows = cat.expenses
+      .map((e) => ({ e, v: md(detail.k).expenses[e.id] }))
+      .filter((r) => r.v != null)
+    return { cat, k: detail.k, color: color(i), rows, total: catTotal(detail.k, cat) }
+  })
 </script>
 
 <div class="analyse">
@@ -175,13 +191,47 @@
         <path d={linePath(s.pts)} stroke={s.color} style="color:{s.color}" class="line" />
         {#each s.pts as v, i (i)}
           {#if v != null}
-            <circle cx={x(i)} cy={y(v)} r="3.4" fill={s.color} class="pt">
-              <title>{s.cat.name} — {shortLabel(months[i])} : {fmt(v)}</title>
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <circle
+              cx={x(i)}
+              cy={y(v)}
+              r={detail && detail.catId === s.cat.id && detail.k === months[i] ? 5 : 3.4}
+              fill={s.color}
+              class="pt"
+              role="button"
+              tabindex="0"
+              onclick={() => togglePoint(s.cat.id, months[i])}
+              onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && togglePoint(s.cat.id, months[i])}>
+              <title>{s.cat.name} — {shortLabel(months[i])} : {fmt(v)} (cliquer pour le détail)</title>
             </circle>
           {/if}
         {/each}
       {/each}
     </svg>
+    {#if detailData}
+      <div class="detail" style="--c:{detailData.color}">
+        <div class="dhead">
+          <span class="swatch" style="background:{detailData.color}; box-shadow:0 0 8px {detailData.color}"></span>
+          <b>{detailData.cat.name}</b>
+          <span class="dmonth">— {monthLabel(detailData.k)}</span>
+          <span class="dtotal">{fmt(detailData.total)}</span>
+          <button class="close" title="Fermer" onclick={() => (detail = null)}>✕</button>
+        </div>
+        {#if detailData.rows.length}
+          <ul>
+            {#each detailData.rows as r (r.e.id)}
+              <li>
+                <span class="dname">{r.e.name}</span>
+                <span class="dval" class:zeroval={r.v === 0}>{fmt(r.v)}</span>
+                <span class="dpct">{detailData.total > 0 ? pct(r.v / detailData.total) : ''}</span>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="empty">Aucune dépense saisie ce mois-ci.</p>
+        {/if}
+      </div>
+    {/if}
   </section>
 </div>
 
@@ -277,5 +327,46 @@
     stroke-linecap: round;
     filter: drop-shadow(0 0 5px currentColor);
   }
-  .pt { cursor: help; }
+  .pt { cursor: pointer; transition: r 0.15s; }
+  .pt:hover { r: 5; }
+  .pt:focus { outline: none; }
+
+  /* --- détail d'un point --- */
+  .detail {
+    margin-top: 14px;
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    border-radius: 12px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--c) 6%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--c) 15%, transparent);
+    max-width: 480px;
+  }
+  .dhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .dhead b { color: var(--txt); }
+  .dmonth { color: var(--muted); font-size: 13px; }
+  .dtotal { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--c); }
+  .close {
+    font: inherit;
+    font-size: 12px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s;
+  }
+  .close:hover { color: var(--txt); }
+  .detail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .detail li {
+    display: grid;
+    grid-template-columns: 1fr auto 48px;
+    gap: 10px;
+    font-size: 13px;
+    align-items: center;
+  }
+  .dname { color: #c7cde0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dval { font-variant-numeric: tabular-nums; text-align: right; }
+  .dval.zeroval { color: var(--muted); }
+  .dpct { color: var(--muted); font-size: 11.5px; text-align: right; }
 </style>

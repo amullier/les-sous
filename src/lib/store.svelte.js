@@ -8,7 +8,7 @@ export const startedFresh = !localStorage.getItem(KEY)
 export function defaultState() {
   const pa = uid(), pc = uid()
   const cat = (name, expenses) => ({ id: uid(), name, expenses })
-  const exp = (name, locked = false, planned = null) => ({ id: uid(), name, locked, planned, incomeLineId: null })
+  const exp = (name, locked = false) => ({ id: uid(), name, locked, incomeLineId: null })
   return {
     settings: {
       people: [
@@ -27,10 +27,10 @@ export function defaultState() {
       tutorialDone: false,
       categories: [
         cat('Maison', [
-          exp('Prêt + assurance', true, 0),
-          exp('Électricité + Gaz', true, 0),
-          exp('Eau', true, 0),
-          exp('Assurance habitation', true, 0),
+          exp('Prêt + assurance', true),
+          exp('Électricité + Gaz', true),
+          exp('Eau', true),
+          exp('Assurance habitation', true),
           exp('Travaux'),
         ]),
         cat('Alimentation', [
@@ -39,8 +39,8 @@ export function defaultState() {
           exp('Autres (goûter, épices…)'),
         ]),
         cat('Abonnements', [
-          exp('Internet / Mobile', true, 0),
-          exp('Streaming', true, 0),
+          exp('Internet / Mobile', true),
+          exp('Streaming', true),
         ]),
         cat('Transport', [exp('Essence'), exp('Train / Transports en commun')]),
         cat('Loisirs & Sorties', [exp('Activités'), exp('Bars'), exp('Vacances')]),
