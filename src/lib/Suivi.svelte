@@ -22,7 +22,7 @@
   const EMPTY = { incomes: {}, real: {}, expenses: {} }
   const md = (k) => store.months[k] ?? EMPTY
   function ensure(k) {
-    if (!store.months[k]) store.months[k] = { incomes: {}, real: {}, expenses: {} }
+    if (!store.months[k]) store.months[k] = { incomes: {}, real: {}, expenses: {}, savings: {} }
     return store.months[k]
   }
 

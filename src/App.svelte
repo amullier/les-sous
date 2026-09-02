@@ -3,13 +3,14 @@
   import Suivi from './lib/Suivi.svelte'
   import Parametrage from './lib/Parametrage.svelte'
   import Analyse from './lib/Analyse.svelte'
+  import Epargne from './lib/Epargne.svelte'
   import Tutorial from './lib/Tutorial.svelte'
   import Icon from './lib/Icon.svelte'
   import LockScreen from './lib/LockScreen.svelte'
 
   // routing par hash : #/suivi et #/parametrage
-  const ROUTES = { '#/suivi': 'suivi', '#/analyse': 'analyse', '#/parametrage': 'param' }
-  const HASHES = { suivi: '#/suivi', analyse: '#/analyse', param: '#/parametrage' }
+  const ROUTES = { '#/suivi': 'suivi', '#/analyse': 'analyse', '#/epargne': 'epargne', '#/parametrage': 'param' }
+  const HASHES = { suivi: '#/suivi', analyse: '#/analyse', epargne: '#/epargne', param: '#/parametrage' }
   let screen = $state(ROUTES[location.hash] ?? 'suivi')
   if (!ROUTES[location.hash]) history.replaceState(null, '', '#/suivi')
   function go(s) {
@@ -80,6 +81,7 @@
   <nav data-tour="nav">
     <button class:active={screen === 'suivi'} onclick={() => go('suivi')}><Icon name="chart" size={14} /> Suivi</button>
     <button class:active={screen === 'analyse'} onclick={() => go('analyse')}><Icon name="pie" size={14} /> Analyse</button>
+    <button class:active={screen === 'epargne'} onclick={() => go('epargne')}><Icon name="piggy" size={14} /> Épargne</button>
     <button class:active={screen === 'param'} onclick={() => go('param')}><Icon name="settings" size={14} /> Paramétrage</button>
   </nav>
   <button class="savebtn" class:saved onclick={doSave} title="Télécharger un fichier de sauvegarde de vos données">
@@ -105,6 +107,8 @@
     <Suivi />
   {:else if screen === 'analyse'}
     <Analyse />
+  {:else if screen === 'epargne'}
+    <Epargne />
   {:else}
     <Parametrage />
   {/if}

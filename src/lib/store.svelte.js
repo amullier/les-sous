@@ -26,6 +26,7 @@ export function defaultState() {
       startMonth: null, // 'YYYY-MM' — par défaut : mois courant
       tutorialDone: false,
       lockCode: null, // code de masquage d'écran (confidentialité, pas de vraie sécurité)
+      savingsInit: {}, // épargne de départ par personne : { [personId]: n }
       categories: [
         cat('Maison', [
           exp('Prêt + assurance', true),
@@ -48,9 +49,20 @@ export function defaultState() {
         cat('Autres', [exp('Cadeaux'), exp('Frais bancaires'), exp('Frais santé')]),
       ],
     },
-    // 'YYYY-MM': { incomes: {lineId: n}, real: {personId: n}, expenses: {expId: n} }
+    // 'YYYY-MM': { incomes: {lineId: n}, real: {personId: n}, expenses: {expId: n}, savings: {personId: n} }
     months: {},
   }
+}
+
+/** Migrations légères : ajoute les champs manquants aux anciennes données (localStorage ou fichier importé). */
+function migrate(d) {
+  if (d.settings.startMonth === undefined) d.settings.startMonth = null
+  if (d.settings.lockCode === undefined) d.settings.lockCode = null
+  if (d.settings.savingsInit === undefined) d.settings.savingsInit = {}
+  for (const c of d.settings.categories)
+    for (const e of c.expenses) if (e.incomeLineId === undefined) e.incomeLineId = null
+  for (const k of Object.keys(d.months)) if (d.months[k].savings === undefined) d.months[k].savings = {}
+  return d
 }
 
 function load() {
@@ -58,14 +70,7 @@ function load() {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const d = JSON.parse(raw)
-      if (d && d.settings && d.months) {
-        // migrations légères
-        if (d.settings.startMonth === undefined) d.settings.startMonth = null
-        if (d.settings.lockCode === undefined) d.settings.lockCode = null
-        for (const c of d.settings.categories)
-          for (const e of c.expenses) if (e.incomeLineId === undefined) e.incomeLineId = null
-        return d
-      }
+      if (d && d.settings && d.months) return migrate(d)
     }
   } catch {}
   return defaultState()
@@ -78,6 +83,7 @@ export function save() {
 }
 
 export function replaceAll(data) {
+  migrate(data)
   store.settings = data.settings
   store.months = data.months
 }
