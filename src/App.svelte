@@ -5,6 +5,7 @@
   import Analyse from './lib/Analyse.svelte'
   import Tutorial from './lib/Tutorial.svelte'
   import Icon from './lib/Icon.svelte'
+  import LockScreen from './lib/LockScreen.svelte'
 
   // routing par hash : #/suivi et #/parametrage
   const ROUTES = { '#/suivi': 'suivi', '#/analyse': 'analyse', '#/parametrage': 'param' }
@@ -19,6 +20,24 @@
 
   // sauvegarde automatique à chaque modification
   $effect(() => save())
+
+  // ---- Écran de masquage (confidentialité, pas de vraie sécurité) ----
+  // Verrouillé par défaut au démarrage si un code est défini, puis après inactivité.
+  const LOCK_DELAY = 2 * 60 * 1000 // 2 min d'inactivité
+  let locked = $state(!!store.settings.lockCode)
+  let lockTimer
+  function armLockTimer() {
+    clearTimeout(lockTimer)
+    if (store.settings.lockCode) lockTimer = setTimeout(() => (locked = true), LOCK_DELAY)
+  }
+  function activity() {
+    if (!locked) armLockTimer()
+  }
+  $effect(() => {
+    // (ré)arme le timer quand le code change (défini/supprimé)
+    store.settings.lockCode
+    armLockTimer()
+  })
 
   function closeTuto() {
     showTuto = false
@@ -48,7 +67,13 @@
   }
 </script>
 
-<svelte:window onhashchange={() => (screen = ROUTES[location.hash] ?? 'suivi')} />
+<svelte:window
+  onhashchange={() => (screen = ROUTES[location.hash] ?? 'suivi')}
+  onpointermove={activity}
+  onpointerdown={activity}
+  onkeydown={activity}
+  onwheel={activity}
+/>
 
 <header>
   <h1><span class="logo"><Icon name="wallet" size={20} /></span><span class="grad">les sous</span></h1>
@@ -87,6 +112,10 @@
 
 {#if showTuto}
   <Tutorial onclose={closeTuto} setScreen={go} />
+{/if}
+
+{#if locked}
+  <LockScreen onunlock={() => { locked = false; armLockTimer() }} />
 {/if}
 
 <style>

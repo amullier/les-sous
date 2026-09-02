@@ -25,6 +25,7 @@ export function defaultState() {
       monthsToShow: 4,
       startMonth: null, // 'YYYY-MM' — par défaut : mois courant
       tutorialDone: false,
+      lockCode: null, // code de masquage d'écran (confidentialité, pas de vraie sécurité)
       categories: [
         cat('Maison', [
           exp('Prêt + assurance', true),
@@ -60,6 +61,7 @@ function load() {
       if (d && d.settings && d.months) {
         // migrations légères
         if (d.settings.startMonth === undefined) d.settings.startMonth = null
+        if (d.settings.lockCode === undefined) d.settings.lockCode = null
         for (const c of d.settings.categories)
           for (const e of c.expenses) if (e.incomeLineId === undefined) e.incomeLineId = null
         return d

@@ -100,6 +100,18 @@
     if (confirm('Tout effacer et repartir de zéro ? (irréversible, pensez à exporter avant)'))
       replaceAll(defaultState())
   }
+
+  // ---- Code de masquage d'écran ----
+  let newCode = $state('')
+  const codeOk = $derived(/^\d{4,8}$/.test(newCode))
+  function setLockCode() {
+    if (!codeOk) return
+    store.settings.lockCode = newCode
+    newCode = ''
+  }
+  function removeLockCode() {
+    if (confirm("Supprimer le code ? L'écran ne sera plus masqué.")) store.settings.lockCode = null
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -217,6 +229,26 @@
       </div>
     {/each}
     <button class="add" onclick={addCategory}><Icon name="plus" size={14} /> Ajouter une catégorie</button>
+  </section>
+
+  <section>
+    <h2>Masquage de l'écran</h2>
+    <p class="hint">
+      <Icon name="lock" size={13} /> Si un code est défini, l'écran est <b>flouté au démarrage et après 2 minutes
+      d'inactivité</b> : pratique pour éviter les regards indiscrets si l'onglet reste ouvert.
+      Ce n'est <b>pas une vraie sécurité</b> (les données restent lisibles dans le navigateur).
+    </p>
+    {#if S.lockCode}
+      <div class="row">
+        <span>Code actuel : <b>défini</b></span>
+        <button class="danger" onclick={removeLockCode}><Icon name="x" size={13} /> Supprimer le code</button>
+      </div>
+    {/if}
+    <div class="row">
+      <span>{S.lockCode ? 'Changer le code' : 'Définir un code'}</span>
+      <input type="password" inputmode="numeric" placeholder="4 à 8 chiffres" maxlength="8" bind:value={newCode} style="width:140px" />
+      <button onclick={setLockCode} disabled={!codeOk}><Icon name="check" size={13} /> Valider</button>
+    </div>
   </section>
 
   <section>
@@ -368,6 +400,12 @@
   button:active {
     transform: translateY(0) scale(0.98);
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
   button.add {
     background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(167, 139, 250, 0.24));
