@@ -55,9 +55,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(6, 9, 18, 0.55);
-    backdrop-filter: blur(26px) saturate(1.2);
-    -webkit-backdrop-filter: blur(26px) saturate(1.2);
+    background: var(--bg, #080b16);
   }
   .box {
     display: flex;
