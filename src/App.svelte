@@ -63,7 +63,7 @@
     if (!file) return
     importSaveFile(file)
       .then(() => (showImportBanner = false))
-      .catch(() => alert('Fichier invalide.'))
+      .catch((err) => err.message !== 'import annulé' && alert('Fichier invalide.'))
     e.target.value = ''
   }
 </script>

@@ -93,7 +93,7 @@
   function importJson(e) {
     const file = e.target.files[0]
     if (!file) return
-    importSaveFile(file).catch(() => alert('Fichier invalide.'))
+    importSaveFile(file).catch((err) => err.message !== 'import annulé' && alert('Fichier invalide.'))
     e.target.value = ''
   }
   function reset() {

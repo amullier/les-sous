@@ -93,6 +93,9 @@ export function replaceAll(data) {
 // le tout parfaitement réversible. Fallback sans gzip si l'API n'est pas dispo.
 
 const MAGIC = 'SOUS1:'
+// Format chiffré : "SOUS2:" + base64(sel(16) + iv(12) + AES-GCM(gzip(JSON))),
+// clé dérivée du code de masquage via PBKDF2 (SHA-256, 100 000 itérations).
+const MAGIC2 = 'SOUS2:'
 
 function bytesToB64(bytes) {
   let bin = ''
@@ -110,7 +113,33 @@ const gzip = (bytes) => pipeBytes(bytes, new CompressionStream('gzip'))
 const gunzip = (bytes) => pipeBytes(bytes, new DecompressionStream('gzip'))
 const hasGzip = typeof CompressionStream !== 'undefined'
 
-/** Importe un fichier de sauvegarde (tous formats : gzip+base64, base64 seul, JSON en clair). */
+async function deriveKey(code, salt, usage) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey'])
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    [usage]
+  )
+}
+
+async function encryptBytes(bytes, code) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await deriveKey(code, salt, 'encrypt')
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes))
+  const out = new Uint8Array(salt.length + iv.length + ct.length)
+  out.set(salt), out.set(iv, salt.length), out.set(ct, salt.length + iv.length)
+  return out
+}
+
+async function decryptBytes(bytes, code) {
+  const key = await deriveKey(code, bytes.slice(0, 16), 'decrypt')
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(16, 28) }, key, bytes.slice(28)))
+}
+
+/** Importe un fichier de sauvegarde (tous formats : chiffré, gzip+base64, base64 seul, JSON en clair). */
 export async function importSaveFile(file) {
   const raw = (await file.text()).trim()
   let json
@@ -118,7 +147,23 @@ export async function importSaveFile(file) {
     // très ancien format : JSON en clair
     json = raw
   } else {
-    const bytes = b64ToBytes(raw.startsWith(MAGIC) ? raw.slice(MAGIC.length) : raw)
+    let bytes
+    if (raw.startsWith(MAGIC2)) {
+      // fichier chiffré : demander le code jusqu'à réussite (ou annulation)
+      const enc = b64ToBytes(raw.slice(MAGIC2.length))
+      for (;;) {
+        const code = prompt('Ce fichier est chiffré. Entrez le code de masquage utilisé lors de l’export :')
+        if (code === null) throw new Error('import annulé')
+        try {
+          bytes = await decryptBytes(enc, code.trim())
+          break
+        } catch {
+          alert('Code incorrect.')
+        }
+      }
+    } else {
+      bytes = b64ToBytes(raw.startsWith(MAGIC) ? raw.slice(MAGIC.length) : raw)
+    }
     // magic bytes gzip : 0x1f 0x8b
     const packed = bytes[0] === 0x1f && bytes[1] === 0x8b
     json = new TextDecoder().decode(packed ? await gunzip(bytes) : bytes)
@@ -128,12 +173,14 @@ export async function importSaveFile(file) {
   replaceAll(d)
 }
 
-/** Télécharge un fichier de sauvegarde compressé (gzip) et encodé (base64). */
+/** Télécharge un fichier de sauvegarde compressé (gzip), chiffré avec le code de masquage s'il existe. */
 export async function exportSave() {
   const json = JSON.stringify({ settings: store.settings, months: store.months })
   let bytes = new TextEncoder().encode(json)
   if (hasGzip) bytes = await gzip(bytes)
-  const blob = new Blob([MAGIC + bytesToB64(bytes)], { type: 'application/octet-stream' })
+  const code = store.settings.lockCode
+  const payload = code ? MAGIC2 + bytesToB64(await encryptBytes(bytes, code)) : MAGIC + bytesToB64(bytes)
+  const blob = new Blob([payload], { type: 'application/octet-stream' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   const d = new Date()
