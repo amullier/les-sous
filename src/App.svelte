@@ -7,6 +7,7 @@
   import Tutorial from './lib/Tutorial.svelte'
   import Icon from './lib/Icon.svelte'
   import LockScreen from './lib/LockScreen.svelte'
+  import CodePrompt from './lib/CodePrompt.svelte'
 
   // routing par hash : #/suivi et #/parametrage
   const ROUTES = { '#/suivi': 'suivi', '#/analyse': 'analyse', '#/epargne': 'epargne', '#/parametrage': 'param' }
@@ -85,8 +86,12 @@
     <button class:active={screen === 'param'} onclick={() => go('param')}><Icon name="settings" size={14} /> Paramétrage</button>
   </nav>
   <button class="savebtn" class:saved onclick={doSave} title="Télécharger un fichier de sauvegarde de vos données">
-    {#if saved}<Icon name="check" size={14} /> Sauvegardé{:else}<Icon name="save" size={14} /> Sauvegarder{/if}
+    {#if saved}<Icon name="check" size={15} />{:else}<Icon name="save" size={15} />{/if}
   </button>
+  <label class="savebtn" title="Importer une sauvegarde">
+    <Icon name="upload" size={15} />
+    <input type="file" accept=".ls,.sous,.json,application/json" onchange={bannerImport} hidden />
+  </label>
   <button class="help" title="Revoir le tutoriel" onclick={() => (showTuto = true)}><Icon name="help" size={16} /></button>
 </header>
 
@@ -121,6 +126,8 @@
 {#if locked}
   <LockScreen onunlock={() => { locked = false; armLockTimer() }} />
 {/if}
+
+<CodePrompt />
 
 <style>
   header {
@@ -178,9 +185,13 @@
   }
   .savebtn {
     font: inherit;
-    padding: 8px 16px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    flex: none;
     border: 1px solid rgba(34, 211, 238, 0.35);
-    border-radius: 999px;
+    border-radius: 50%;
     background: linear-gradient(135deg, rgba(34, 211, 238, 0.14), rgba(167, 139, 250, 0.16));
     color: #a5f3fc;
     cursor: pointer;

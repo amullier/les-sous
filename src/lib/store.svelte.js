@@ -1,4 +1,5 @@
 import { uid } from './utils.js'
+import { askCode } from './codePrompt.svelte.js'
 
 const KEY = 'lessous-v1'
 
@@ -151,14 +152,15 @@ export async function importSaveFile(file) {
     if (raw.startsWith(MAGIC2)) {
       // fichier chiffré : demander le code jusqu'à réussite (ou annulation)
       const enc = b64ToBytes(raw.slice(MAGIC2.length))
+      let wrong = false
       for (;;) {
-        const code = prompt('Ce fichier est chiffré. Entrez le code de masquage utilisé lors de l’export :')
+        const code = await askCode(wrong)
         if (code === null) throw new Error('import annulé')
         try {
           bytes = await decryptBytes(enc, code.trim())
           break
         } catch {
-          alert('Code incorrect.')
+          wrong = true
         }
       }
     } else {
